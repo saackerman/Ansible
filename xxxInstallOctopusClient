@@ -1,0 +1,27 @@
+---
+- name: Install and configure Octopus Tentacle
+  hosts: windows
+  become: yes
+  tasks:
+    - name: Download Tentacle MSI
+      win_get_url:
+        url: https://octopus.com/downloads/latest/WindowsX64/OctopusTentacle.msi
+        dest: C:\temp\OctopusTentacle.msi
+
+    - name: Install Tentacle silently
+      win_command: msiexec /i C:\temp\OctopusTentacle.msi /quiet INSTALLLOCATION=C:\OctopusTentacle
+
+    - name: Create Tentacle instance
+      win_command: "C:\OctopusTentacle\Tentacle.exe create-instance --instance Tentacle --config C:\OctopusTentacle\tentacle.config --console"
+
+    - name: Generate new certificate
+      win_command: "C:\OctopusTentacle\Tentacle.exe new-certificate --instance Tentacle --if-blank --console"
+
+    - name: Configure Tentacle to listen
+      win_command: "C:\OctopusTentacle\Tentacle.exe configure --instance Tentacle --reset-trust --home C:\Octopus --app C:\Octopus\Applications --port 10933 --console"
+
+    - name: Register Tentacle with Octopus Server
+      win_command: "C:\OctopusTentacle\Tentacle.exe register-with --instance Tentacle --server http://YOUR_OCTOPUS_SERVER --apiKey=API-KEY"
+
+    - name: Allow Tentacle through firewall
+      win_command: netsh advfirewall firewall add rule name=OctopusDeployTentacle dir=in action=allow protocol=TCP localport=10933
